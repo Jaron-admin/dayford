@@ -144,6 +144,17 @@ void main() {
     again.dispose();
     await repo.close();
   });
+
+  test('a day whose only content is an append still shows in history', () async {
+    final repo = await DiaryRepository.open(inMemoryDatabasePath);
+    await repo.saveAppend('2026-10-21', '凌晨补一句', DateTime(2026, 10, 22, 5));
+    final entry = await repo.getEntry('2026-10-21');
+    expect(entry, isNotNull);
+    expect(entry!.appends.single.body, '凌晨补一句');
+    expect(entry.hasContent, isTrue);
+    expect((await repo.history()).map((item) => item.dayKey), contains('2026-10-21'));
+    await repo.close();
+  });
 }
 
 DiaryController _controller(

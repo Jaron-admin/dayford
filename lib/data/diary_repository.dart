@@ -147,7 +147,13 @@ class DiaryRepository {
   ) async {
     final existing = await getEntry(dayKey);
     if (existing == null) {
-      await saveBody(dayKey, '', now);
+      // saveBody refuses an empty body, which used to leave the append pointing at
+      // a day that history() never visits. Create the day row outright instead.
+      await _db.insert('entries', {
+        'day_key': dayKey,
+        'body': '',
+        'updated_at': now.toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     final id = await _db.insert('appends', {
       'day_key': dayKey,
