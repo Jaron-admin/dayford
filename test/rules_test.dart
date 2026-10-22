@@ -97,7 +97,7 @@ void main() {
     final repo = await DiaryRepository.open(inMemoryDatabasePath);
     final controller = _controller(repo, DateTime(2026, 10, 22, 22));
     await controller.init();
-    expect(controller.saveDelay, const Duration(seconds: 1));
+    expect(controller.saveDelay, const Duration(milliseconds: 300));
     controller.onTodayText('立刻写下');
     await controller.flush();
     expect((await repo.getEntry('2026-10-22'))?.body, '立刻写下');
@@ -155,8 +155,7 @@ void main() {
     await repo.close();
   });
 
-  test('typing across 04:00 is kept, then the day rolls over', () async {
-    final repo = await DiaryRepository.open(inMemoryDatabasePath);
+  test('typing across 04:00 is kept, then the day rolls over', () async {    final repo = await DiaryRepository.open(inMemoryDatabasePath);
     final clock = ManualClock(DateTime(2026, 10, 22, 3, 59));
     final controller = _controller(repo, clock.now(), clock: clock);
     await controller.init();
@@ -169,6 +168,20 @@ void main() {
     expect(controller.editingDay?.key, '2026-10-22');
     expect(controller.todayText, '');
     expect(controller.sealedFocus, '2026-10-21');
+    controller.dispose();
+    await repo.close();
+  });
+
+  test('a sentence typed 350ms ago is already on disk', () async {
+    final repo = await DiaryRepository.open(inMemoryDatabasePath);
+    final controller = _controller(repo, DateTime(2026, 10, 22, 12));
+    await controller.init();
+    controller.onTodayText('刚写一半就被关了');
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    final again = _controller(repo, DateTime(2026, 10, 22, 12));
+    await again.init();
+    expect(again.todayText, '刚写一半就被关了');
+    again.dispose();
     controller.dispose();
     await repo.close();
   });

@@ -18,7 +18,7 @@ class DiaryController extends ChangeNotifier {
     required this.ai,
     required this.models,
     required this.brightness,
-    this.saveDelay = const Duration(seconds: 1),
+    this.saveDelay = const Duration(milliseconds: 300),
     this.watchClock = false,
   });
 
@@ -208,6 +208,7 @@ class DiaryController extends ChangeNotifier {
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _saveTimer = null;
     _watchTimer?.cancel();
     models.removeListener(_onModel);
     super.dispose();
