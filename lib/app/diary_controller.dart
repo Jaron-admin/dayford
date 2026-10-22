@@ -116,8 +116,11 @@ class DiaryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The open day stays writable until [checkBoundary] rolls it over. A sentence
+  /// typed across 04:00 belongs to the day it started on, so refusing the input
+  /// here would drop whatever the user wrote just before sleeping.
   void onTodayText(String value) {
-    if (todayIsSealed || value == todayText) return;
+    if (value == todayText) return;
     todayText = value;
     _saveTimer?.cancel();
     _saveTimer = Timer(saveDelay, flush);

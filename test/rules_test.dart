@@ -145,14 +145,31 @@ void main() {
     await repo.close();
   });
 
-  test('a day whose only content is an append still shows in history', () async {
-    final repo = await DiaryRepository.open(inMemoryDatabasePath);
+  test('a day whose only content is an append still shows in history', () async {    final repo = await DiaryRepository.open(inMemoryDatabasePath);
     await repo.saveAppend('2026-10-21', '凌晨补一句', DateTime(2026, 10, 22, 5));
     final entry = await repo.getEntry('2026-10-21');
     expect(entry, isNotNull);
     expect(entry!.appends.single.body, '凌晨补一句');
     expect(entry.hasContent, isTrue);
     expect((await repo.history()).map((item) => item.dayKey), contains('2026-10-21'));
+    await repo.close();
+  });
+
+  test('typing across 04:00 is kept, then the day rolls over', () async {
+    final repo = await DiaryRepository.open(inMemoryDatabasePath);
+    final clock = ManualClock(DateTime(2026, 10, 22, 3, 59));
+    final controller = _controller(repo, clock.now(), clock: clock);
+    await controller.init();
+    controller.onTodayText('凌晨写的');
+    clock.set(DateTime(2026, 10, 22, 4, 0, 30));
+    controller.onTodayText('凌晨写的，又补了一句');
+    expect(controller.todayText, '凌晨写的，又补了一句');
+    await controller.checkBoundary();
+    expect((await repo.getEntry('2026-10-21'))?.body, '凌晨写的，又补了一句');
+    expect(controller.editingDay?.key, '2026-10-22');
+    expect(controller.todayText, '');
+    expect(controller.sealedFocus, '2026-10-21');
+    controller.dispose();
     await repo.close();
   });
 }
