@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'app/dayford_app.dart';
+import 'ui/theme/tokens.dart';
 import 'app/diary_controller.dart';
 import 'data/diary_repository.dart';
 import 'services/ai_service.dart';
@@ -12,6 +13,7 @@ import 'services/model_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await DecoAssets.ensureLoaded();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   final dir = await getApplicationDocumentsDirectory();
   final repo = await DiaryRepository.open(p.join(dir.path, 'dayford.db'));

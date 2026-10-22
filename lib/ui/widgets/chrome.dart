@@ -589,11 +589,16 @@ class RuleLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = TokenScope.of(context);
     if (!tokens.showRule) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.only(top: 20),
-      width: 44,
-      height: 1.2,
-      color: tokens.rule,
+    // A bare width is ignored inside a ListView's tight cross-axis, which
+    // stretched this into a full-width rule. Align loosens that constraint.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(top: 20),
+        width: 44,
+        height: 1.2,
+        color: tokens.rule,
+      ),
     );
   }
 }
@@ -843,11 +848,10 @@ class _LinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1;
+    final paint = Paint()..color = color;
+    // Handoff / prototype: 1px rule every 34px, first rule under the first line.
     for (double y = 33; y < size.height; y += 34) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+      canvas.drawRect(Rect.fromLTWH(0, y, size.width, 1), paint);
     }
   }
 

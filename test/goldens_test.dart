@@ -24,6 +24,7 @@ void main() {
       sans.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
     }
     await sans.load();
+    await DecoAssets.ensureLoaded();
     // flutter test passes --disable-asset-fonts, so the pubspec family is
     // not registered unless we load the same bundled files ourselves.
     final serif = FontLoader('Noto Serif SC');
@@ -140,7 +141,11 @@ Future<void> _expectShot(
     renderObject = renderObject.parent!;
   }
   final layer = renderObject.debugLayer! as OffsetLayer;
-  final image = await layer.toImage(renderObject.paintBounds, pixelRatio: 3);
+  final bounds = renderObject.paintBounds;
+  // Some repaint boundaries are already in physical pixels. Multiplying those
+  // by 3 again made the Android shots 9× and the serif looked like boxes.
+  final pixelRatio = bounds.width > 800 ? 1.0 : 3.0;
+  final image = await layer.toImage(bounds, pixelRatio: pixelRatio);
   try {
     await expectLater(image, matchesGoldenFile(name));
   } finally {

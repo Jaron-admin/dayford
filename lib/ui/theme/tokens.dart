@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 enum ThemeId {
   a('A', '晨雾', null, true),
@@ -565,6 +567,61 @@ LinearGradient? _lerpGradient(LinearGradient? a, LinearGradient? b, double t) {
   return LinearGradient(begin: a.begin, end: a.end, colors: colors);
 }
 
+/// Raster decorations shared by the app and goldens.
+///
+/// Mist is blurred in the 353×790 viewBox, then stretched, so the haze matches
+/// the prototype instead of a tighter, pinker screen-space blur. Watercolor is
+/// the handoff SVG (turbulence, displacement, blur) rasterized the same way;
+/// smooth ovals read more saturated than that wash.
+class DecoAssets {
+  static ui.Image? mist;
+  static ui.Image? watercolor;
+  static Future<void>? _loading;
+
+  static const viewW = 353.0;
+  static const viewH = 790.0;
+  static const mistScale = 2.0;
+  static const mistPad = 240.0;
+
+  static Future<void> ensureLoaded() => _loading ??= _load();
+
+  static Future<void> _load() async {
+    final data = await rootBundle.load('assets/deco/watercolor.png');
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    watercolor = (await codec.getNextFrame()).image;
+    mist = _rasterMist();
+  }
+
+  static ui.Image _rasterMist() {
+    const scale = mistScale;
+    const pad = mistPad;
+    final width = (viewW * scale + pad * 2).round();
+    final height = (viewH * scale + pad * 2).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.translate(pad, pad);
+    canvas.saveLayer(
+      Rect.fromLTWH(-pad, -pad, width.toDouble(), height.toDouble()),
+      Paint()..color = const Color.fromRGBO(255, 255, 255, 0.55),
+    );
+    final blur = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40 * scale);
+    void blob(double x, double y, double r, Color color) {
+      blur.color = color;
+      canvas.drawCircle(Offset(x * scale, y * scale), r * scale, blur);
+    }
+
+    blob(300, 90, 90, const Color(0xFFF3CDBB));
+    blob(40, 300, 80, const Color(0xFFD6E3D5));
+    blob(320, 640, 100, const Color(0xFFDCD4EC));
+    canvas.restore();
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(width, height);
+    picture.dispose();
+    return image;
+  }
+}
+
 class DecoPainter extends CustomPainter {
   DecoPainter(this.tokens);
 
@@ -587,104 +644,71 @@ class DecoPainter extends CustomPainter {
   }
 
   void _mist(Canvas canvas, Size size) {
-    canvas.saveLayer(
+    final image = DecoAssets.mist;
+    if (image == null) return;
+    const pad = DecoAssets.mistPad;
+    canvas.drawImageRect(
+      image,
+      const Rect.fromLTWH(
+        pad,
+        pad,
+        DecoAssets.viewW * DecoAssets.mistScale,
+        DecoAssets.viewH * DecoAssets.mistScale,
+      ),
       Offset.zero & size,
-      Paint()..color = const Color.fromRGBO(255, 255, 255, 0.55),
+      Paint(),
     );
-    final blur = Paint()
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
-    void blob(double x, double y, double r, Color color) {
-      blur.color = color;
-      canvas.drawCircle(
-        Offset(size.width * x, size.height * y),
-        r * size.width / 353,
-        blur,
-      );
-    }
-
-    blob(300 / 353, 90 / 790, 90, const Color(0xFFF3CDBB));
-    blob(40 / 353, 300 / 790, 80, const Color(0xFFD6E3D5));
-    blob(320 / 353, 640 / 790, 100, const Color(0xFFDCD4EC));
-    canvas.restore();
   }
 
   void _lamp(Canvas canvas, Size size, {required bool light}) {
-    final rect = Offset.zero & size;
+    // SVG objectBoundingBox radial gradients are ellipses stretched to the
+    // screen. A circular Flutter radius stays a tight warm spot.
+    final radius = light ? 0.8 : 0.75;
+    final colors = <Color>[
+      Color.fromRGBO(0xF2, 0xB8, 0x80, light ? 0.34 : 0.32),
+      Color.fromRGBO(0xE5, 0x9A, 0xA0, light ? 0.10 : 0.08),
+      light
+          ? const Color.fromRGBO(0xFB, 0xF4, 0xEA, 0)
+          : const Color.fromRGBO(0x1C, 0x20, 0x30, 0),
+    ];
+    final stops = light
+        ? const <double>[0, 0.45, 1]
+        : const <double>[0, 0.5, 1];
     final paint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(0.7, -0.96),
-        radius: light ? 0.8 : 0.75,
-        colors: [
-          const Color(0xFFF2B880).withValues(alpha: light ? 0.34 : 0.32),
-          const Color(0xFFE59AA0).withValues(alpha: light ? 0.10 : 0.08),
-          const Color(0x00000000),
-        ],
-        stops: const [0, 0.45, 1],
-      ).createShader(rect);
-    canvas.drawRect(rect, paint);
+      ..shader = ui.Gradient.radial(Offset.zero, 1, colors, stops);
+    canvas.save();
+    canvas.translate(size.width * 0.85, size.height * 0.02);
+    canvas.scale(size.width * radius, size.height * radius);
+    canvas.drawRect(const Rect.fromLTRB(-2, -2, 2, 2), paint);
+    canvas.restore();
     if (light) return;
+    canvas.save();
+    canvas.scale(size.width / DecoAssets.viewW, size.height / DecoAssets.viewH);
     final star = Paint()
       ..color = const Color(0xFFF1ECE3).withValues(alpha: 0.35);
-    const stars = [
-      [40.0, 120.0, 1.4],
-      [90.0, 60.0, 1.0],
-      [200.0, 140.0, 1.4],
-      [60.0, 420.0, 1.0],
-      [300.0, 380.0, 1.4],
-      [150.0, 700.0, 1.0],
-      [280.0, 560.0, 1.4],
+    const stars = <List<double>>[
+      [40, 120, 1.4],
+      [90, 60, 1],
+      [200, 140, 1.4],
+      [60, 420, 1],
+      [300, 380, 1.4],
+      [150, 700, 1],
+      [280, 560, 1.4],
     ];
     for (final item in stars) {
-      canvas.drawCircle(
-        Offset(size.width * item[0] / 353, size.height * item[1] / 790),
-        item[2],
-        star,
-      );
+      canvas.drawCircle(Offset(item[0], item[1]), item[2], star);
     }
+    canvas.restore();
   }
 
   void _watercolor(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    void blob(double x, double y, double rx, double ry, Color color) {
-      paint.color = color;
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(size.width * x, size.height * y),
-          width: rx * 2 * size.width / 353,
-          height: ry * 2 * size.height / 790,
-        ),
-        paint,
-      );
-    }
-
-    blob(
-      318 / 353,
-      70 / 790,
-      70,
-      46,
-      const Color(0xFFF5C9BD).withValues(alpha: 0.55),
-    );
-    blob(
-      282 / 353,
-      42 / 790,
-      34,
-      24,
-      const Color(0xFFF6E2A6).withValues(alpha: 0.60),
-    );
-    blob(
-      22 / 353,
-      760 / 790,
-      80,
-      50,
-      const Color(0xFFC6E3E2).withValues(alpha: 0.75),
-    );
-    blob(
-      82 / 353,
-      780 / 790,
-      40,
-      26,
-      const Color(0xFFDCD0EF).withValues(alpha: 0.75),
+    final image = DecoAssets.watercolor;
+    if (image == null) return;
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.medium,
     );
   }
 

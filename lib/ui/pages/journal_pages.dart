@@ -46,70 +46,95 @@ class TodayView extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(26, top + 18, 26, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onLongPress: onDebug,
-                    child: Text(
-                      dateLine,
-                      style: styles.sans(
-                        size: 13,
-                        color: tokens.ink3,
-                        letterSpacing: 13 * 0.06,
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(26, top + 18, 26, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onLongPress: onDebug,
+                          child: Text(
+                            dateLine,
+                            style: styles.sans(
+                              size: 13,
+                              color: tokens.ink3,
+                              letterSpacing: 13 * 0.06,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          title,
+                          style: styles.serif(
+                            size: 30,
+                            line: 40,
+                            weight: FontWeight.w600,
+                            letterSpacing: 30 * 0.02,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          hint,
+                          style: styles.sans(
+                            size: 15,
+                            line: 24,
+                            color: tokens.ink2,
+                          ),
+                        ),
+                        if (privacy != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Row(
+                              children: [
+                                DayIcon(
+                                  'lock',
+                                  size: 14,
+                                  stroke: 1.8,
+                                  color: tokens.ink3,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  privacy!,
+                                  style: styles.sans(
+                                    size: 13,
+                                    color: tokens.ink3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const RuleLine(),
+                        SizedBox(height: tokens.showRule ? 10 : 22),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(26, 0, 26, 28),
+                  sliver: SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: LinedPaper(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: interactive
+                            ? _LiveEditor(
+                                text: text,
+                                placeholder: placeholder,
+                                autofocus: autofocus,
+                                onChanged: onChanged,
+                              )
+                            : _FrozenEditor(
+                                text: text,
+                                placeholder: placeholder,
+                              ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    title,
-                    style: styles.serif(
-                      size: 30,
-                      line: 40,
-                      weight: FontWeight.w600,
-                      letterSpacing: 30 * 0.02,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    hint,
-                    style: styles.sans(size: 15, line: 24, color: tokens.ink2),
-                  ),
-                  if (privacy != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Row(
-                        children: [
-                          DayIcon(
-                            'lock',
-                            size: 14,
-                            stroke: 1.8,
-                            color: tokens.ink3,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            privacy!,
-                            style: styles.sans(size: 13, color: tokens.ink3),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const RuleLine(),
-                  SizedBox(height: tokens.showRule ? 10 : 22),
-                  LinedPaper(
-                    child: interactive
-                        ? _LiveEditor(
-                            text: text,
-                            placeholder: placeholder,
-                            autofocus: autofocus,
-                            onChanged: onChanged,
-                          )
-                        : _FrozenEditor(text: text, placeholder: placeholder),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -928,18 +953,21 @@ class HistoryView extends StatelessWidget {
             ),
             for (final group in groups) ...[
               SectionLabel(group.$1),
-              DecoratedBox(
-                decoration: tokens.cardBox(),
-                child: Column(
-                  children: [
-                    for (var i = 0; i < group.$2.length; i++)
-                      _HistoryRow(
-                        group.$2[i],
-                        dotIndex: dot++,
-                        first: i == 0,
-                        onTap: () => onOpen?.call(group.$2[i].$1),
-                      ),
-                  ],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: DecoratedBox(
+                  decoration: tokens.cardBox(),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < group.$2.length; i++)
+                        _HistoryRow(
+                          group.$2[i],
+                          dotIndex: dot++,
+                          first: i == 0,
+                          onTap: () => onOpen?.call(group.$2[i].$1),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -970,53 +998,62 @@ class _HistoryRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
-        decoration: BoxDecoration(
-          border: first ? null : Border(top: BorderSide(color: tokens.line)),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: 19),
               child: DoneDot(index: dotIndex),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: row.$2,
-                          style: styles.sans(
-                            size: 15,
-                            line: 22,
-                            weight: FontWeight.w600,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(0, 13, 0, 13),
+                decoration: BoxDecoration(
+                  border: first
+                      ? null
+                      : Border(top: BorderSide(color: tokens.line)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: row.$2,
+                            style: styles.sans(
+                              size: 15,
+                              line: 22,
+                              weight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        TextSpan(
-                          text: '  ${row.$3}',
-                          style: styles.sans(size: 13, color: tokens.ink3),
-                        ),
-                      ],
+                          TextSpan(
+                            text: '  ${row.$3}',
+                            style: styles.sans(size: 13, color: tokens.ink3),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    row.$4,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: styles.serif(size: 15, line: 24, color: tokens.ink2),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      row.$4,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: styles.serif(
+                        size: 15,
+                        line: 24,
+                        color: tokens.ink2,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.only(top: 25),
               child: DayIcon('chevR', size: 16, stroke: 2, color: tokens.ink3),
             ),
           ],

@@ -56,6 +56,7 @@ flutter:
 
   assets:
     - assets/fonts/OFL.txt
+    - assets/deco/watercolor.png
 
   fonts:
     - family: Noto Serif SC
