@@ -18,7 +18,7 @@ class DiaryController extends ChangeNotifier {
     required this.ai,
     required this.models,
     required this.brightness,
-    this.saveDelay = const Duration(seconds: 1),
+    this.saveDelay = const Duration(milliseconds: 300),
     this.watchClock = false,
   });
 
@@ -78,7 +78,7 @@ class DiaryController extends ChangeNotifier {
     editingDay = DiaryDay.from(clock.now());
     final entry = await repo.getEntry(editingDay!.key);
     todayText = entry?.body ?? '';
-    if ((await repo.history()).isNotEmpty) welcome = false;
+    if (await repo.hasAnyEntry()) welcome = false;
     models.addListener(_onModel);
     loaded = true;
     notifyListeners();
@@ -116,8 +116,11 @@ class DiaryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The open day stays writable until [checkBoundary] rolls it over. A sentence
+  /// typed across 04:00 belongs to the day it started on, so refusing the input
+  /// here would drop whatever the user wrote just before sleeping.
   void onTodayText(String value) {
-    if (todayIsSealed || value == todayText) return;
+    if (value == todayText) return;
     todayText = value;
     _saveTimer?.cancel();
     _saveTimer = Timer(saveDelay, flush);
@@ -186,7 +189,7 @@ class DiaryController extends ChangeNotifier {
   Future<void> saveReply(String reply, List<String> done) async {
     final day = editingDay;
     if (day == null) return;
-    await repo.saveAi(day.key, reply, done);
+    await repo.saveAi(day.key, reply, done, clock.now());
   }
 
   Future<void> saveAppend(String dayKey, String text) async {
@@ -205,6 +208,7 @@ class DiaryController extends ChangeNotifier {
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _saveTimer = null;
     _watchTimer?.cancel();
     models.removeListener(_onModel);
     super.dispose();
