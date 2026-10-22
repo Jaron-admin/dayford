@@ -624,6 +624,7 @@ class SealedView extends StatelessWidget {
     required this.original,
     required this.appends,
     required this.done,
+    this.reply = '',
     this.draftLabel,
     this.draftText,
     this.navLabel = '历史',
@@ -640,6 +641,7 @@ class SealedView extends StatelessWidget {
   final String original;
   final List<(String, String)> appends;
   final List<String> done;
+  final String reply;
   final String? draftLabel;
   final String? draftText;
   final String navLabel;
@@ -723,9 +725,19 @@ class SealedView extends StatelessWidget {
                       editing: true,
                       onChanged: onDraftChanged,
                     ),
-                  if (!editing && done.isNotEmpty) ...[
+                  if (!editing && (reply.isNotEmpty || done.isNotEmpty)) ...[
                     const SizedBox(height: 28),
-                    _DoneCard(title: '那天其实做完了', items: done),
+                    if (reply.isNotEmpty) ...[
+                      Text(
+                        '那天的回应',
+                        style: styles.sans(size: 13, color: tokens.ink3),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(reply, style: styles.serif(size: 17, line: 31)),
+                      if (done.isNotEmpty) const SizedBox(height: 22),
+                    ],
+                    if (done.isNotEmpty)
+                      _DoneCard(title: '那天其实做完了', items: done),
                   ],
                 ],
               ),

@@ -108,30 +108,34 @@ class _ResponseScreenState extends State<ResponseScreen> {
 
   Future<void> _play() async {
     final result = widget.controller.ai.respond(widget.quote);
-    if (widget.reduceMotion) {
-      if (!mounted) return;
+    try {
+      if (widget.reduceMotion) {
+        if (!mounted || _closed) return;
+        setState(() {
+          _reply = result.reply;
+          _done = result.done;
+          _kind = 'ai-done';
+        });
+        return;
+      }
+      await for (final partial in widget.controller.ai.streamReply(
+        widget.quote,
+      )) {
+        if (!mounted || _closed) return;
+        setState(() => _reply = partial);
+      }
+      await Future<void>.delayed(FakeAiService.settle);
+      if (!mounted || _closed) return;
       setState(() {
         _reply = result.reply;
         _done = result.done;
         _kind = 'ai-done';
       });
+    } finally {
+      // Leaving the page mid-stream used to return before this line, so the
+      // reply the user never saw was also never written.
       await widget.controller.saveReply(result.reply, result.done);
-      return;
     }
-    await for (final partial in widget.controller.ai.streamReply(
-      widget.quote,
-    )) {
-      if (!mounted || _closed) return;
-      setState(() => _reply = partial);
-    }
-    await Future<void>.delayed(FakeAiService.settle);
-    if (!mounted || _closed) return;
-    setState(() {
-      _reply = result.reply;
-      _done = result.done;
-      _kind = 'ai-done';
-    });
-    await widget.controller.saveReply(result.reply, result.done);
   }
 
   @override
@@ -377,6 +381,7 @@ class _SealedScreenState extends State<SealedScreen> {
           (formatAppendLabel(append.savedAt), append.body),
       ],
       done: entry?.aiDone ?? const [],
+      reply: entry?.aiReply ?? '',
       draftLabel: _editing ? _draftLabel : null,
       draftText: _draft,
       navLabel: widget.navLabel,

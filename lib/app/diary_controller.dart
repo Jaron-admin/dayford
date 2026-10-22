@@ -189,7 +189,7 @@ class DiaryController extends ChangeNotifier {
   Future<void> saveReply(String reply, List<String> done) async {
     final day = editingDay;
     if (day == null) return;
-    await repo.saveAi(day.key, reply, done);
+    await repo.saveAi(day.key, reply, done, clock.now());
   }
 
   Future<void> saveAppend(String dayKey, String text) async {

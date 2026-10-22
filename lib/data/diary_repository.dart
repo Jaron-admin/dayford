@@ -163,13 +163,28 @@ class DiaryRepository {
     return StoredAppend(id: id, dayKey: dayKey, body: body, savedAt: now);
   }
 
-  Future<void> saveAi(String dayKey, String reply, List<String> done) {
-    return _db.update(
+  /// A reply outlives the page that produced it, so it must not depend on the
+  /// day row already existing: update, and insert the row when it is missing.
+  Future<void> saveAi(
+    String dayKey,
+    String reply,
+    List<String> done,
+    DateTime now,
+  ) async {
+    final values = {'ai_reply': reply, 'ai_done': jsonEncode(done)};
+    final updated = await _db.update(
       'entries',
-      {'ai_reply': reply, 'ai_done': jsonEncode(done)},
+      values,
       where: 'day_key = ?',
       whereArgs: [dayKey],
     );
+    if (updated > 0) return;
+    await _db.insert('entries', {
+      'day_key': dayKey,
+      'body': '',
+      'updated_at': now.toIso8601String(),
+      ...values,
+    });
   }
 
   Future<List<StoredEntry>> history() async {
