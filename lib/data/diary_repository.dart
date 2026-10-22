@@ -58,7 +58,7 @@ class DiaryRepository {
   static Future<DiaryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE entries (
@@ -83,9 +83,32 @@ class DiaryRepository {
             value TEXT NOT NULL
           )
         ''');
+        await _createIndexes(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) await _createIndexes(db);
       },
     );
     return DiaryRepository._(db);
+  }
+
+  /// Every `_appends` lookup and every history grouping keys on this column.
+  static Future<void> _createIndexes(Database db) async {
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_appends_day ON appends(day_key)',
+    );
+  }
+
+  /// Cheap first-run check: [history] loads and joins every day, which is too
+  /// much to pay before the first frame just to learn the diary is empty.
+  Future<bool> hasAnyEntry() async {
+    final rows = await _db.rawQuery('''
+      SELECT 1 FROM entries e
+      WHERE trim(e.body) <> ''
+         OR EXISTS (SELECT 1 FROM appends a WHERE a.day_key = e.day_key)
+      LIMIT 1
+    ''');
+    return rows.isNotEmpty;
   }
 
   Future<void> close() => _db.close();
@@ -189,10 +212,18 @@ class DiaryRepository {
 
   Future<List<StoredEntry>> history() async {
     final rows = await _db.query('entries', orderBy: 'day_key DESC');
+    if (rows.isEmpty) return const <StoredEntry>[];
+    // One query for all appends beats one query per day; a year of entries used
+    // to cost 366 sequential round-trips on every cold start.
+    final byDay = <String, List<StoredAppend>>{};
+    for (final row in await _db.query('appends', orderBy: 'id ASC')) {
+      final append = _appendFrom(row);
+      (byDay[append.dayKey] ??= <StoredAppend>[]).add(append);
+    }
     final result = <StoredEntry>[];
     for (final row in rows) {
       final key = row['day_key'] as String;
-      final entry = _entryFrom(row, await _appends(key));
+      final entry = _entryFrom(row, byDay[key] ?? const <StoredAppend>[]);
       if (entry.hasContent) result.add(entry);
     }
     return result;
@@ -213,16 +244,16 @@ class DiaryRepository {
       whereArgs: [dayKey],
       orderBy: 'id ASC',
     );
-    return rows
-        .map(
-          (row) => StoredAppend(
-            id: row['id'] as int,
-            dayKey: row['day_key'] as String,
-            body: row['body'] as String,
-            savedAt: DateTime.parse(row['saved_at'] as String),
-          ),
-        )
-        .toList();
+    return rows.map(_appendFrom).toList();
+  }
+
+  StoredAppend _appendFrom(Map<String, Object?> row) {
+    return StoredAppend(
+      id: row['id'] as int,
+      dayKey: row['day_key'] as String,
+      body: row['body'] as String,
+      savedAt: DateTime.parse(row['saved_at'] as String),
+    );
   }
 
   StoredEntry _entryFrom(Map<String, Object?> row, List<StoredAppend> appends) {

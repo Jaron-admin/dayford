@@ -172,8 +172,7 @@ void main() {
     await repo.close();
   });
 
-  test('a sentence typed 350ms ago is already on disk', () async {
-    final repo = await DiaryRepository.open(inMemoryDatabasePath);
+  test('a sentence typed 350ms ago is already on disk', () async {    final repo = await DiaryRepository.open(inMemoryDatabasePath);
     final controller = _controller(repo, DateTime(2026, 10, 22, 12));
     await controller.init();
     controller.onTodayText('刚写一半就被关了');
@@ -183,6 +182,36 @@ void main() {
     expect(again.todayText, '刚写一半就被关了');
     again.dispose();
     controller.dispose();
+    await repo.close();
+  });
+
+  test('appends are indexed by day', () async {
+    final dir = await Directory.systemTemp.createTemp('dayford');
+    final path = '${dir.path}/diary.db';
+    final repo = await DiaryRepository.open(path);
+    await repo.close();
+    final raw = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(readOnly: true, singleInstance: false),
+    );
+    final indexes = await raw.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_appends_day'",
+    );
+    await raw.close();
+    expect(indexes, hasLength(1));
+  });
+
+  test('history keeps every append when there are many days', () async {
+    final repo = await DiaryRepository.open(inMemoryDatabasePath);
+    for (var i = 1; i <= 40; i++) {
+      final day = DiaryDay(DateTime(2026, 9, 1).add(Duration(days: i)));
+      await repo.saveBody(day.key, '第 $i 天', DateTime(2026, 9, 1));
+      await repo.saveAppend(day.key, '补一句 $i', DateTime(2026, 9, 2));
+    }
+    final all = await repo.history();
+    expect(all, hasLength(40));
+    expect(all.first.appends.single.body, '补一句 40');
+    expect(all.last.appends.single.body, '补一句 1');
     await repo.close();
   });
 }

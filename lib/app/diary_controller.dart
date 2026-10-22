@@ -78,7 +78,7 @@ class DiaryController extends ChangeNotifier {
     editingDay = DiaryDay.from(clock.now());
     final entry = await repo.getEntry(editingDay!.key);
     todayText = entry?.body ?? '';
-    if ((await repo.history()).isNotEmpty) welcome = false;
+    if (await repo.hasAnyEntry()) welcome = false;
     models.addListener(_onModel);
     loaded = true;
     notifyListeners();
