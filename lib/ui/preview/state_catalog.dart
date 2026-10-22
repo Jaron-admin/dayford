@@ -217,7 +217,13 @@ class StatePreview extends StatelessWidget {
             child: page,
           )
         : page;
-    return TokenScope(tokens: tokens, child: body);
+    return TokenScope(
+      tokens: tokens,
+      child: DefaultTextStyle(
+        style: DayfordStyles(tokens).sans(size: 17, color: tokens.ink),
+        child: body,
+      ),
+    );
   }
 }
 

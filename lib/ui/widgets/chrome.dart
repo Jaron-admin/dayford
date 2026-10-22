@@ -14,9 +14,14 @@ class PageFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = TokenScope.of(context);
-    return ColoredBox(
+    final style = DayfordStyles(tokens).sans(size: 17, color: tokens.ink);
+    return Material(
       color: tokens.bg,
-      child: CustomPaint(painter: DecoPainter(tokens), child: child),
+      elevation: 0,
+      child: DefaultTextStyle(
+        style: style,
+        child: CustomPaint(painter: DecoPainter(tokens), child: child),
+      ),
     );
   }
 }
@@ -645,88 +650,91 @@ class PreviewChrome extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = TokenScope.of(context);
     final styles = DayfordStyles(tokens);
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Positioned.fill(child: child),
-        Positioned(
-          top: 11,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: IgnorePointer(
-              child: Container(
-                width: 120,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF000000),
-                  borderRadius: BorderRadius.circular(18),
+    return DefaultTextStyle(
+      style: styles.sans(size: 15, color: tokens.ink),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(child: child),
+          Positioned(
+            top: 11,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: IgnorePointer(
+                child: Container(
+                  width: 120,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF000000),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 50,
-          child: IgnorePointer(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(30, 6, 30, 0),
-              child: Row(
-                children: [
-                  Text(
-                    time,
-                    style: styles.sans(
-                      size: 15,
-                      weight: FontWeight.w600,
-                      color: tokens.ink,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (cellular)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Text(
-                        '5G',
-                        style: styles.sans(
-                          size: 12,
-                          weight: FontWeight.w600,
-                          color: tokens.ink,
-                        ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 50,
+            child: IgnorePointer(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(30, 6, 30, 0),
+                child: Row(
+                  children: [
+                    Text(
+                      time,
+                      style: styles.sans(
+                        size: 15,
+                        weight: FontWeight.w600,
+                        color: tokens.ink,
                       ),
                     ),
-                  _Signal(color: tokens.ink),
-                  const SizedBox(width: 6),
-                  if (!cellular) ...[
-                    DayIcon('wifi', size: 15, stroke: 1.6, color: tokens.ink),
+                    const Spacer(),
+                    if (cellular)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Text(
+                          '5G',
+                          style: styles.sans(
+                            size: 12,
+                            weight: FontWeight.w600,
+                            color: tokens.ink,
+                          ),
+                        ),
+                      ),
+                    _Signal(color: tokens.ink),
                     const SizedBox(width: 6),
+                    if (!cellular) ...[
+                      DayIcon('wifi', size: 15, stroke: 1.6, color: tokens.ink),
+                      const SizedBox(width: 6),
+                    ],
+                    _Battery(color: tokens.ink),
                   ],
-                  _Battery(color: tokens.ink),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 8,
-          left: 0,
-          right: 0,
-          child: IgnorePointer(
-            child: Center(
-              child: Container(
-                width: 134,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: tokens.ink.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+          Positioned(
+            bottom: 8,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  width: 134,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: tokens.ink.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

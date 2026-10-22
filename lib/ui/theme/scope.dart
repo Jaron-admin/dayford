@@ -86,22 +86,26 @@ class _AnimatedTokenHostState extends State<AnimatedTokenHost>
   @override
   Widget build(BuildContext context) {
     final dark = _shown.isDark;
+    final style = DayfordStyles(_shown).sans(size: 17, color: _shown.ink);
     return TokenScope(
       tokens: _shown,
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle(
-          statusBarColor: _shown.bg,
-          statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
-          statusBarBrightness: dark ? Brightness.dark : Brightness.light,
-          systemNavigationBarColor: _shown.bg,
-          systemNavigationBarIconBrightness: dark
-              ? Brightness.light
-              : Brightness.dark,
-          systemNavigationBarDividerColor: const Color(0x00000000),
-          systemStatusBarContrastEnforced: false,
-          systemNavigationBarContrastEnforced: false,
+      child: DefaultTextStyle(
+        style: style,
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: _shown.bg,
+            statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+            statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: _shown.bg,
+            systemNavigationBarIconBrightness: dark
+                ? Brightness.light
+                : Brightness.dark,
+            systemNavigationBarDividerColor: const Color(0x00000000),
+            systemStatusBarContrastEnforced: false,
+            systemNavigationBarContrastEnforced: false,
+          ),
+          child: widget.child,
         ),
-        child: widget.child,
       ),
     );
   }
@@ -130,6 +134,7 @@ class DayfordStyles {
       fontWeight: weight,
       color: color ?? tokens.ink,
       letterSpacing: letterSpacing,
+      decoration: TextDecoration.none,
     );
   }
 
@@ -153,6 +158,7 @@ class DayfordStyles {
       fontWeight: weight,
       color: color ?? tokens.ink,
       letterSpacing: letterSpacing,
+      decoration: TextDecoration.none,
     );
   }
 }

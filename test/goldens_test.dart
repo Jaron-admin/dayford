@@ -17,13 +17,23 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    final loader = FontLoader('Noto Sans CJK SC');
+    final sans = FontLoader('Noto Sans CJK SC');
     for (final name in ['NotoSansSC-Regular.ttf', 'NotoSansSC-SemiBold.ttf']) {
       final bytes = await File('third_party/fonts/noto-sans-sc/$name')
           .readAsBytes();
-      loader.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
+      sans.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
     }
-    await loader.load();
+    await sans.load();
+    // flutter test passes --disable-asset-fonts, so the pubspec family is
+    // not registered unless we load the same bundled files ourselves.
+    final serif = FontLoader('Noto Serif SC');
+    for (final asset in [
+      'assets/fonts/NotoSerifSC-Regular.ttf',
+      'assets/fonts/NotoSerifSC-SemiBold.ttf',
+    ]) {
+      serif.addFont(rootBundle.load(asset));
+    }
+    await serif.load();
     goldenFileComparator = LocalFileComparator(
       Uri.parse('${Directory.current.path}/docs/screenshots/0.1/goldens.dart'),
     );
